@@ -82,6 +82,7 @@ function Index() {
   const resetCode = useCallback(() => {
     setCode(DEFAULT_HTML);
     setPreview(DEFAULT_HTML);
+    setErrors([]);
   }, []);
 
   useEffect(() => {
