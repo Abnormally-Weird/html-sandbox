@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Panel, Group, Separator } from "react-resizable-panels";
-import { Play, RotateCcw, AlertTriangle } from "lucide-react";
+import { Play, RotateCcw, AlertTriangle, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const DEFAULT_HTML = `<!DOCTYPE html>
@@ -100,6 +100,18 @@ function Index() {
     setErrors([]);
   }, []);
 
+  const exportCode = useCallback(() => {
+    const blob = new Blob([code], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "index.html";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [code]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
@@ -163,6 +175,10 @@ function Index() {
           <h1 className="text-lg font-semibold text-foreground">HTML Tester</h1>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={exportCode}>
+            <Download className="mr-1 h-3.5 w-3.5" />
+            Export
+          </Button>
           <Button variant="outline" size="sm" onClick={resetCode}>
             <RotateCcw className="mr-1 h-3.5 w-3.5" />
             Reset
