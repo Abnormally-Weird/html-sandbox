@@ -175,6 +175,10 @@ function Index() {
           <h1 className="text-lg font-semibold text-foreground">HTML Tester</h1>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={exportCode}>
+            <Download className="mr-1 h-3.5 w-3.5" />
+            Export
+          </Button>
           <Button variant="outline" size="sm" onClick={resetCode}>
             <RotateCcw className="mr-1 h-3.5 w-3.5" />
             Reset
