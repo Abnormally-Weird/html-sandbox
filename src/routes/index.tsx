@@ -327,6 +327,7 @@ function Index() {
               </svg>
               HTML
             </div>
+            <div className="relative flex-1 min-h-0">
             <textarea
               ref={textareaRef}
               value={code}
@@ -340,7 +341,7 @@ function Index() {
               onClick={syncCaret}
               onSelect={syncCaret}
               onScroll={syncScroll}
-              className="flex-1 resize-none bg-transparent p-4 font-mono text-sm leading-relaxed outline-none relative z-10"
+              className="absolute inset-0 h-full w-full resize-none bg-transparent p-4 font-mono text-sm leading-relaxed outline-none z-10"
               spellCheck={false}
               autoCapitalize="off"
               autoCorrect="off"
@@ -350,13 +351,14 @@ function Index() {
             <div
               ref={mirrorRef}
               aria-hidden
-              className="pointer-events-none absolute inset-0 top-[33px] overflow-hidden whitespace-pre-wrap break-words p-4 font-mono text-sm leading-relaxed"
+              className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words p-4 font-mono text-sm leading-relaxed"
               style={{ tabSize: 2 }}
             >
               <span className="invisible">{code.slice(0, caret)}</span>
               {ghostText && (
                 <span className="text-muted-foreground/60">{ghostText}</span>
               )}
+            </div>
             </div>
             {currentSuggestion && completions && (
               <div className="border-t border-border bg-muted/40 px-3 py-1.5 text-[11px] text-muted-foreground flex items-center gap-2">
