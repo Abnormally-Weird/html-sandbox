@@ -154,7 +154,7 @@ function Index() {
           </div>
         </Panel>
 
-        <PanelResizeHandle className="relative flex w-px items-center justify-center bg-border transition-colors hover:bg-ring">
+        <Separator className="relative flex w-px items-center justify-center bg-border transition-colors hover:bg-ring">
           <div className="rounded-full bg-muted p-1">
             <svg
               viewBox="0 0 24 24"
@@ -166,7 +166,7 @@ function Index() {
               <path d="M9 18l6-6-6-6" />
             </svg>
           </div>
-        </PanelResizeHandle>
+        </Separator>
 
         <Panel defaultSize={50} minSize={20}>
           <div className="flex h-full flex-col bg-background">
