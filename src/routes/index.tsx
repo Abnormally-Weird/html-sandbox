@@ -226,6 +226,21 @@ function Index() {
               className="flex-1 w-full border-none"
               sandbox="allow-scripts"
             />
+            {errors.length > 0 && (
+              <div className="max-h-48 overflow-auto border-t border-destructive/20 bg-destructive/10 p-3">
+                <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-destructive">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  Errors ({errors.length})
+                </div>
+                <div className="space-y-1">
+                  {errors.map((err, i) => (
+                    <div key={i} className="break-all font-mono text-xs text-destructive">
+                      {err}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </Panel>
       </Group>
