@@ -200,6 +200,7 @@ function Index() {
               ref={textareaRef}
               value={code}
               onChange={(e) => setCode(e.target.value)}
+              onFocus={handleFocus}
               onKeyDown={handleTab}
               className="flex-1 resize-none bg-background p-4 font-mono text-sm leading-relaxed outline-none"
               spellCheck={false}
