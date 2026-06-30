@@ -51,6 +51,7 @@ function Index() {
   const [code, setCode] = useState(DEFAULT_HTML);
   const [preview, setPreview] = useState(DEFAULT_HTML);
   const [errors, setErrors] = useState<string[]>([]);
+  const [hasInter: boolean, setHasInteracted] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const injectReporter = (html: string, scriptTag: string): string => {
