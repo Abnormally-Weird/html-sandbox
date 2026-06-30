@@ -90,7 +90,7 @@ function Index() {
   };
 })();
 </script>`;
-    setPreview(code + reporter);
+    setPreview(injectReporter(code, reporter));
   }, [code]);
 
   const resetCode = useCallback(() => {
