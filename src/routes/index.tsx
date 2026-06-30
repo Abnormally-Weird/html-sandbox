@@ -96,6 +96,16 @@ function Index() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [runCode]);
 
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data && e.data.type === "html-tester-error") {
+        setErrors((prev) => [...prev, e.data.message]);
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, []);
+
   const handleTab = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Tab") {
       e.preventDefault();
