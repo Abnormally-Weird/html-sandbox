@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Panel, Group, Separator } from "react-resizable-panels";
-import { Play, RotateCcw } from "lucide-react";
+import { Play, RotateCcw, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const DEFAULT_HTML = `<!DOCTYPE html>
@@ -50,15 +50,53 @@ export const Route = createFileRoute("/")({
 function Index() {
   const [code, setCode] = useState(DEFAULT_HTML);
   const [preview, setPreview] = useState(DEFAULT_HTML);
+  const [errors, setErrors] = useState<string[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const injectReporter = (html: string, scriptTag: string): string => {
+    const headMatch = html.match(/<head[^>]*>/i);
+    if (headMatch) {
+      const idx = headMatch.index! + headMatch[0].length;
+      return html.slice(0, idx) + scriptTag + html.slice(idx);
+    }
+    const htmlMatch = html.match(/<html[^>]*>/i);
+    if (htmlMatch) {
+      const idx = htmlMatch.index! + htmlMatch[0].length;
+      return html.slice(0, idx) + "<head>" + scriptTag + "</head>" + html.slice(idx);
+    }
+    return scriptTag + html;
+  };
+
   const runCode = useCallback(() => {
-    setPreview(code);
+    setErrors([]);
+    const reporter = `<script>
+(function(){
+  function send(msg){
+    try{window.parent.postMessage({type:'html-tester-error',message:msg},'*');}catch(e){}
+  }
+  var orig=window.onerror;
+  window.onerror=function(m,s,l,c,err){
+    send(String(m)+' (line '+l+', col '+c+')');
+    if(orig) return orig.apply(this,arguments);
+  };
+  window.addEventListener('unhandledrejection',function(e){
+    send('Unhandled Promise Rejection: '+String(e.reason));
+  });
+  var ce=console.error;
+  console.error=function(){
+    var args=Array.from(arguments).map(function(a){try{return typeof a==='object'?JSON.stringify(a):String(a);}catch(e){return '[Object]';}}).join(' ');
+    ce.apply(console,arguments);
+    send('Console error: '+args);
+  };
+})();
+</script>`;
+    setPreview(injectReporter(code, reporter));
   }, [code]);
 
   const resetCode = useCallback(() => {
     setCode(DEFAULT_HTML);
     setPreview(DEFAULT_HTML);
+    setErrors([]);
   }, []);
 
   useEffect(() => {
@@ -71,6 +109,16 @@ function Index() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [runCode]);
+
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data && e.data.type === "html-tester-error") {
+        setErrors((prev) => [...prev, e.data.message]);
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, []);
 
   const handleTab = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Tab") {
@@ -192,6 +240,21 @@ function Index() {
               className="flex-1 w-full border-none"
               sandbox="allow-scripts"
             />
+            {errors.length > 0 && (
+              <div className="max-h-48 overflow-auto border-t border-destructive/20 bg-destructive/10 p-3">
+                <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-destructive">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  Errors ({errors.length})
+                </div>
+                <div className="space-y-1">
+                  {errors.map((err, i) => (
+                    <div key={i} className="break-all font-mono text-xs text-destructive">
+                      {err}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </Panel>
       </Group>
