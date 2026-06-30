@@ -121,6 +121,13 @@ function Index() {
     return () => window.removeEventListener("message", handler);
   }, []);
 
+  const handleFocus = () => {
+    if (!hasInteracted && code === DEFAULT_HTML) {
+      setCode("");
+    }
+    setHasInteracted(true);
+  };
+
   const handleTab = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Tab") {
       e.preventDefault();
