@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Panel, Group, Separator } from "react-resizable-panels";
 import { Play, RotateCcw, AlertTriangle, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -47,12 +47,108 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
+const HTML_TAGS = [
+  "a", "abbr", "address", "article", "aside", "audio", "b", "blockquote", "body",
+  "br", "button", "canvas", "caption", "code", "col", "colgroup", "datalist", "dd",
+  "del", "details", "dialog", "div", "dl", "dt", "em", "embed", "fieldset",
+  "figcaption", "figure", "footer", "form", "h1", "h2", "h3", "h4", "h5", "h6",
+  "head", "header", "hr", "html", "i", "iframe", "img", "input", "kbd", "label",
+  "legend", "li", "link", "main", "mark", "meta", "meter", "nav", "noscript",
+  "ol", "optgroup", "option", "output", "p", "param", "picture", "pre", "progress",
+  "q", "s", "samp", "script", "section", "select", "small", "source", "span",
+  "strong", "style", "sub", "summary", "sup", "table", "tbody", "td", "template",
+  "textarea", "tfoot", "th", "thead", "time", "title", "tr", "track", "u", "ul",
+  "var", "video", "wbr",
+];
+
+const HTML_ATTRS = [
+  "class", "id", "style", "href", "src", "alt", "title", "type", "name", "value",
+  "placeholder", "disabled", "readonly", "checked", "selected", "required",
+  "rel", "target", "for", "role", "tabindex", "lang", "width", "height",
+  "onclick", "onchange", "oninput", "onsubmit", "data-",
+  "aria-label", "aria-hidden", "aria-describedby", "aria-labelledby",
+];
+
+type CompletionCtx = {
+  prefix: string;
+  matches: string[];
+  kind: "tag" | "attr";
+};
+
+function getCompletions(code: string, caret: number): CompletionCtx | null {
+  const before = code.slice(0, caret);
+  const wordMatch = before.match(/([a-zA-Z][a-zA-Z0-9-]*)$/);
+  if (!wordMatch) return null;
+  const prefix = wordMatch[1];
+  const beforeWord = before.slice(0, before.length - prefix.length);
+
+  // Inside an open tag? find last '<' and last '>'
+  const lastOpen = beforeWord.lastIndexOf("<");
+  const lastClose = beforeWord.lastIndexOf(">");
+
+  if (lastOpen > lastClose) {
+    // We're inside a tag. If the char right before our word is '<' (or '</'), it's a tag name.
+    const trimmed = beforeWord.slice(lastOpen);
+    const isTagName = /^<\/?$/.test(trimmed);
+    const pool = isTagName ? HTML_TAGS : HTML_ATTRS;
+    const lower = prefix.toLowerCase();
+    const matches = pool.filter((t) => t.startsWith(lower) && t !== lower);
+    if (!matches.length) return null;
+    return { prefix, matches, kind: isTagName ? "tag" : "attr" };
+  }
+  return null;
+}
+
 function Index() {
   const [code, setCode] = useState(DEFAULT_HTML);
   const [preview, setPreview] = useState(DEFAULT_HTML);
   const [errors, setErrors] = useState<string[]>([]);
   const [hasInteracted, setHasInteracted] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const mirrorRef = useRef<HTMLDivElement>(null);
+  const [caret, setCaret] = useState(0);
+  const [suggestionIdx, setSuggestionIdx] = useState(0);
+
+  const completions = useMemo(() => getCompletions(code, caret), [code, caret]);
+  const currentSuggestion =
+    completions && completions.matches.length
+      ? completions.matches[suggestionIdx % completions.matches.length]
+      : null;
+  const ghostText =
+    currentSuggestion && completions
+      ? currentSuggestion.slice(completions.prefix.length)
+      : "";
+
+  // Reset suggestion index whenever the context changes
+  useEffect(() => {
+    setSuggestionIdx(0);
+  }, [completions?.prefix, completions?.kind]);
+
+  const acceptSuggestion = useCallback(() => {
+    if (!currentSuggestion || !completions || !textareaRef.current) return;
+    const ta = textareaRef.current;
+    const insertion = currentSuggestion.slice(completions.prefix.length);
+    const newCode = code.slice(0, caret) + insertion + code.slice(caret);
+    const newCaret = caret + insertion.length;
+    setCode(newCode);
+    requestAnimationFrame(() => {
+      ta.selectionStart = ta.selectionEnd = newCaret;
+      setCaret(newCaret);
+    });
+  }, [currentSuggestion, completions, code, caret]);
+
+  const syncCaret = () => {
+    if (textareaRef.current) {
+      setCaret(textareaRef.current.selectionStart ?? 0);
+    }
+  };
+
+  const syncScroll = () => {
+    if (textareaRef.current && mirrorRef.current) {
+      mirrorRef.current.scrollTop = textareaRef.current.scrollTop;
+      mirrorRef.current.scrollLeft = textareaRef.current.scrollLeft;
+    }
+  };
 
   const injectReporter = (html: string, scriptTag: string): string => {
     const headMatch = html.match(/<head[^>]*>/i);
@@ -140,8 +236,18 @@ function Index() {
     setHasInteracted(true);
   };
 
-  const handleTab = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Tab") {
+      if (currentSuggestion && completions && completions.matches.length > 1) {
+        e.preventDefault();
+        setSuggestionIdx((i) => (i + 1) % completions.matches.length);
+        return;
+      }
+      if (currentSuggestion) {
+        // single match — cycle just keeps it; still prevent indent jump
+        e.preventDefault();
+        return;
+      }
       e.preventDefault();
       const start = e.currentTarget.selectionStart;
       const end = e.currentTarget.selectionEnd;
@@ -150,8 +256,17 @@ function Index() {
       requestAnimationFrame(() => {
         if (textareaRef.current) {
           textareaRef.current.selectionStart = textareaRef.current.selectionEnd = start + 2;
+          setCaret(start + 2);
         }
       });
+      return;
+    }
+    if (e.key === "ArrowRight" && currentSuggestion) {
+      const ta = e.currentTarget;
+      if (ta.selectionStart === ta.selectionEnd && ta.selectionStart === caret) {
+        e.preventDefault();
+        acceptSuggestion();
+      }
     }
   };
 
@@ -212,18 +327,45 @@ function Index() {
               </svg>
               HTML
             </div>
+            <div className="relative flex-1 min-h-0">
             <textarea
               ref={textareaRef}
               value={code}
-              onChange={(e) => setCode(e.target.value)}
+              onChange={(e) => {
+                setCode(e.target.value);
+                setCaret(e.target.selectionStart ?? 0);
+              }}
               onFocus={handleFocus}
-              onKeyDown={handleTab}
-              className="flex-1 resize-none bg-background p-4 font-mono text-sm leading-relaxed outline-none"
+              onKeyDown={handleKeyDown}
+              onKeyUp={syncCaret}
+              onClick={syncCaret}
+              onSelect={syncCaret}
+              onScroll={syncScroll}
+              className="absolute inset-0 h-full w-full resize-none bg-transparent p-4 font-mono text-sm leading-relaxed outline-none z-10"
               spellCheck={false}
               autoCapitalize="off"
               autoCorrect="off"
               style={{ tabSize: 2 }}
             />
+            {/* Ghost text overlay */}
+            <div
+              ref={mirrorRef}
+              aria-hidden
+              className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words p-4 font-mono text-sm leading-relaxed"
+              style={{ tabSize: 2 }}
+            >
+              <span className="invisible">{code.slice(0, caret)}</span>
+              {ghostText && (
+                <span className="text-muted-foreground/60">{ghostText}</span>
+              )}
+            </div>
+            </div>
+            {currentSuggestion && completions && (
+              <div className="border-t border-border bg-muted/40 px-3 py-1.5 text-[11px] text-muted-foreground flex items-center gap-2">
+                <span className="font-mono text-foreground">{currentSuggestion}</span>
+                <span>· Tab to cycle ({(suggestionIdx % completions.matches.length) + 1}/{completions.matches.length}) · → to accept</span>
+              </div>
+            )}
           </div>
         </Panel>
 
