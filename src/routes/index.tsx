@@ -54,7 +54,29 @@ function Index() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const runCode = useCallback(() => {
-    setPreview(code);
+    setErrors([]);
+    const reporter = `<script>
+(function(){
+  function send(msg){
+    try{window.parent.postMessage({type:'html-tester-error',message:msg},'*');}catch(e){}
+  }
+  var orig=window.onerror;
+  window.onerror=function(m,s,l,c,err){
+    send(String(m)+' (line '+l+', col '+c+')');
+    if(orig) return orig.apply(this,arguments);
+  };
+  window.addEventListener('unhandledrejection',function(e){
+    send('Unhandled Promise Rejection: '+String(e.reason));
+  });
+  var ce=console.error;
+  console.error=function(){
+    var args=Array.from(arguments).map(function(a){try{return typeof a==='object'?JSON.stringify(a):String(a);}catch(e){return '[Object]';}}).join(' ');
+    ce.apply(console,arguments);
+    send('Console error: '+args);
+  };
+})();
+</script>`;
+    setPreview(code + reporter);
   }, [code]);
 
   const resetCode = useCallback(() => {
