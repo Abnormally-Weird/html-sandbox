@@ -122,7 +122,7 @@ function Index() {
       </header>
 
       {/* Editor + Preview */}
-      <PanelGroup direction="horizontal" className="flex-1 min-h-0">
+      <Group orientation="horizontal" className="flex-1 min-h-0">
         <Panel defaultSize={50} minSize={20}>
           <div className="dark flex h-full flex-col bg-background text-foreground">
             <div className="flex items-center gap-2 border-b border-border px-3 py-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
