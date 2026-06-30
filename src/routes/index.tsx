@@ -50,6 +50,7 @@ export const Route = createFileRoute("/")({
 function Index() {
   const [code, setCode] = useState(DEFAULT_HTML);
   const [preview, setPreview] = useState(DEFAULT_HTML);
+  const [errors, setErrors] = useState<string[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const runCode = useCallback(() => {
