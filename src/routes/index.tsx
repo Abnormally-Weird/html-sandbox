@@ -51,6 +51,7 @@ function Index() {
   const [code, setCode] = useState(DEFAULT_HTML);
   const [preview, setPreview] = useState(DEFAULT_HTML);
   const [errors, setErrors] = useState<string[]>([]);
+  const [hasInteracted, setHasInteracted] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const injectReporter = (html: string, scriptTag: string): string => {
@@ -119,6 +120,13 @@ function Index() {
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
   }, []);
+
+  const handleFocus = () => {
+    if (!hasInteracted && code === DEFAULT_HTML) {
+      setCode("");
+    }
+    setHasInteracted(true);
+  };
 
   const handleTab = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Tab") {
@@ -192,6 +200,7 @@ function Index() {
               ref={textareaRef}
               value={code}
               onChange={(e) => setCode(e.target.value)}
+              onFocus={handleFocus}
               onKeyDown={handleTab}
               className="flex-1 resize-none bg-background p-4 font-mono text-sm leading-relaxed outline-none"
               spellCheck={false}
