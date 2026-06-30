@@ -53,6 +53,20 @@ function Index() {
   const [errors, setErrors] = useState<string[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const injectReporter = (html: string, scriptTag: string): string => {
+    const headMatch = html.match(/<head[^>]*>/i);
+    if (headMatch) {
+      const idx = headMatch.index! + headMatch[0].length;
+      return html.slice(0, idx) + scriptTag + html.slice(idx);
+    }
+    const htmlMatch = html.match(/<html[^>]*>/i);
+    if (htmlMatch) {
+      const idx = htmlMatch.index! + htmlMatch[0].length;
+      return html.slice(0, idx) + "<head>" + scriptTag + "</head>" + html.slice(idx);
+    }
+    return scriptTag + html;
+  };
+
   const runCode = useCallback(() => {
     setErrors([]);
     const reporter = `<script>
