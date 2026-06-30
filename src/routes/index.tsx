@@ -194,7 +194,7 @@ function Index() {
             />
           </div>
         </Panel>
-      </PanelGroup>
+      </Group>
     </div>
   );
 }
